@@ -53,6 +53,7 @@ public class VoiceChatOutputClient implements Runnable {
         StreamingAudioSource source = sources.get(id);
         if (source == null) {
             LOGGER.info("Received packet from unknown client, ignoring");
+            return;
         }
         LOGGER.info("Received packet from {}", packet.getSocketAddress());
         for (int i = 0; i < VoiceChat.BUFFER_LENGTH; i++)
