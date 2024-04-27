@@ -1,7 +1,6 @@
 package fiveavian.java_voice_chat;
 
 import fiveavian.java_voice_chat.client.AudioInputDevice;
-import fiveavian.java_voice_chat.client.AudioOutputDevice;
 import fiveavian.java_voice_chat.client.VoiceChatInputClient;
 import fiveavian.java_voice_chat.client.VoiceChatOutputClient;
 import fiveavian.java_voice_chat.server.VoiceChatRelayServer;
@@ -12,6 +11,8 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import static org.lwjgl.openal.AL11.AL_POSITION;
+import static org.lwjgl.openal.AL11.alSource3f;
 import static org.lwjgl.openal.ALC11.*;
 
 public class VoiceChat {
@@ -36,24 +37,29 @@ public class VoiceChat {
                 DatagramSocket serverSocket = new DatagramSocket(serverAddress);
                 DatagramSocket clientSocket = new DatagramSocket();
                 AudioInputDevice inputDevice = new AudioInputDevice(null);
-                AudioOutputDevice outputDevice = new AudioOutputDevice();
         ) {
             VoiceChatRelayServer relayServer = new VoiceChatRelayServer(serverSocket);
             Thread relayServerThread = new Thread(relayServer);
             VoiceChatInputClient inputClient = new VoiceChatInputClient(clientSocket, inputDevice, serverAddress, 0);
             Thread inputClientThread = new Thread(inputClient);
-            VoiceChatOutputClient outputClient = new VoiceChatOutputClient(clientSocket, outputDevice, serverAddress);
+            VoiceChatOutputClient outputClient = new VoiceChatOutputClient(clientSocket);
             Thread outputClientThread = new Thread(outputClient);
 
             clientSocket.connect(serverAddress);
             relayServer.addConnection(0, clientSocket.getLocalSocketAddress());
+            outputClient.addSource(0);
 
             relayServerThread.start();
             inputClientThread.start();
             outputClientThread.start();
-            relayServerThread.join();
-            inputClientThread.join();
-            outputClientThread.join();
+
+            // Circle your voice around yourself
+            int source = outputClient.getSource(0).source;
+            while (true) {
+                double time = System.currentTimeMillis() / 500d;
+                alSource3f(source, AL_POSITION, (float) Math.cos(time), 0f, (float) Math.sin(time));
+                Thread.sleep(50);
+            }
         }
     }
 }

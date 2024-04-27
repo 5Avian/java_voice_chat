@@ -2,7 +2,7 @@ package fiveavian.java_voice_chat.client;
 
 import fiveavian.java_voice_chat.VoiceChat;
 
-import static org.lwjgl.openal.AL11.*;
+import static org.lwjgl.openal.AL11.AL_FORMAT_MONO16;
 import static org.lwjgl.openal.ALC11.*;
 
 public class AudioInputDevice implements AutoCloseable {

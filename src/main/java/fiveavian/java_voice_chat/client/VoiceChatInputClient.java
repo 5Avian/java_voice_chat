@@ -1,6 +1,8 @@
 package fiveavian.java_voice_chat.client;
 
 import fiveavian.java_voice_chat.VoiceChat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -8,6 +10,8 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
 public class VoiceChatInputClient implements Runnable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(VoiceChatInputClient.class);
+
     private final DatagramSocket socket;
     private final AudioInputDevice inputDevice;
     private final SocketAddress serverAddress;
@@ -32,7 +36,7 @@ public class VoiceChatInputClient implements Runnable {
             try {
                 processInput();
             } catch (Exception ex) {
-                System.err.println("Client: Caught an exception: " + ex.getMessage());
+                LOGGER.error("Caught an exception while running", ex);
             }
         }
     }
@@ -41,7 +45,7 @@ public class VoiceChatInputClient implements Runnable {
         short[] samples = inputDevice.pollSamples();
         if (samples == null)
             return;
-        System.out.println("Client: Sending packet to " + serverAddress);
+        LOGGER.info("Sending packet to {}", serverAddress);
         payloadBuffer.putInt(0, VoiceChat.MAGIC_NUMBER);
         payloadBuffer.putInt(4, id);
         for (int i = 0; i < VoiceChat.BUFFER_LENGTH; i++)

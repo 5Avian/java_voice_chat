@@ -1,14 +1,20 @@
 package fiveavian.java_voice_chat.server;
 
 import fiveavian.java_voice_chat.VoiceChat;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.util.*;
 
 public class VoiceChatRelayServer implements Runnable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(VoiceChatRelayServer.class);
+
     private final DatagramSocket socket;
     private boolean shouldStop = true;
 
@@ -16,7 +22,7 @@ public class VoiceChatRelayServer implements Runnable {
     private final ByteBuffer payloadBuffer = ByteBuffer.wrap(payload);
     private final DatagramPacket packet = new DatagramPacket(payload, payload.length);
 
-    private final Map<Integer, SocketAddress> connections = Collections.synchronizedMap(new HashMap<>());
+    private final Int2ObjectMap<SocketAddress> connections = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>());
 
     public VoiceChatRelayServer(DatagramSocket socket) {
         this.socket = socket;
@@ -29,7 +35,7 @@ public class VoiceChatRelayServer implements Runnable {
             try {
                 processPackets();
             } catch (Exception ex) {
-                System.err.println("Server: Caught an exception: " + ex.getMessage());
+                LOGGER.error("Caught an exception while running", ex);
             }
         }
     }
@@ -40,18 +46,19 @@ public class VoiceChatRelayServer implements Runnable {
         boolean isCorrectSize = packet.getLength() == VoiceChat.PAYLOAD_SIZE;
         boolean hasMagicNumber = payloadBuffer.getInt(0) == VoiceChat.MAGIC_NUMBER;
         if (!isCorrectSize || !hasMagicNumber) {
-            System.out.println("Server: Received invalid packet, ignoring");
+            LOGGER.info("Received invalid packet, ignoring");
             return;
         }
         int clientId = payloadBuffer.getInt(4);
         SocketAddress clientAddress = packet.getSocketAddress();
-        if (!connections.get(clientId).equals(clientAddress)) {
-            System.out.println("Server: Received packet from unknown client, ignoring");
+        boolean isKnownClient = connections.containsKey(clientId) && connections.get(clientId).equals(clientAddress);
+        if (!isKnownClient) {
+            LOGGER.info("Received packet from unknown client, ignoring");
             return;
         }
-        System.out.println("Server: Received packet from " + clientAddress);
+        LOGGER.info("Received packet from {}", clientAddress);
         for (SocketAddress address : connections.values()) {
-            System.out.println("Server: Sending packet to " + address);
+            LOGGER.info("Sending packet to {}", address);
             packet.setSocketAddress(address);
             socket.send(packet);
         }
